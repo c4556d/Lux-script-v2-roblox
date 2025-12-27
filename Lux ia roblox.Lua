@@ -570,51 +570,40 @@ pos.Z
 end
 -- Teleportarse a un objeto (MEJORADO - Múltiples intentos)
 local function TeleportToObject(objData)
-local character = LP.Character
-if not character then
-return false, "personaje no encontrado"
-end
-local rootPart = character:FindFirstChild("HumanoidRootPart")
-if not rootPart then
-return false, "rootpart no encontrado"
-end
--- Desactivar colisiones temporalmente
-local humanoid = character:FindFirstChild("Humanoid")
-if humanoid then
-humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-end
--- Intentar múltiples posiciones con diferentes offsets
-local offsets = {
-Vector3.new(0, 10, 0),   -- Arriba
-Vector3.new(5, 10, 0),   -- Arriba-derecha
-Vector3.new(-5, 10, 0),  -- Arriba-izquierda
-Vector3.new(0, 10, 5),   -- Arriba-adelante
-Vector3.new(0, 10, -5),  -- Arriba-atrás
-}
-local success = false
-for i, offset in ipairs(offsets) do
-local targetPos = objData.position + offset
-pcall(function()
-rootPart.CFrame = CFrame.new(targetPos)
-end)
-task.wait(0.1)
--- Verificar si el teleport funcionó
-local distance = (rootPart.Position - objData.position).Magnitude
-if distance < 50 then
-success = true
-break
-end
-end
--- Restaurar estado del humanoid
-task.wait(0.2)
-if humanoid then
-humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-end
-if success then
-return true, "teleportado"
-else
-return false, "no se pudo tp intenta de nuevo"
-end
+    local character = LP.Character
+    if not character then
+        return false, "personaje no encontrado"
+    end
+    
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then
+        return false, "rootpart no encontrado"
+    end
+    
+    -- Intentar múltiples posiciones con diferentes offsets
+    local offsets = {
+        Vector3.new(0, 5, 0),    -- Arriba
+        Vector3.new(3, 5, 0),    -- Arriba-derecha
+        Vector3.new(-3, 5, 0),   -- Arriba-izquierda
+        Vector3.new(0, 5, 3),    -- Arriba-adelante
+        Vector3.new(0, 5, -3),   -- Arriba-atrás
+    }
+    
+    for i, offset in ipairs(offsets) do
+        local targetPos = objData.position + offset
+        local newCFrame = CFrame.new(targetPos.X, targetPos.Y, targetPos.Z)
+        
+        rootPart.CFrame = newCFrame
+        task.wait(0.05)
+        
+        -- Verificar si el teleport funcionó
+        local distance = (rootPart.Position - objData.position).Magnitude
+        if distance < 50 then
+            return true, "teleportado"
+        end
+    end
+    
+    return false, "no se pudo tp intenta de nuevo"
 end
 -- Función para generar resumen del entorno (texto corto para Lux)
 local function GetEnvironmentSummary()
@@ -2165,53 +2154,63 @@ return
 end
 -- Comando especial: teleportarse a un jugador
 if userMessage:lower():match("^tp a%s+") or userMessage:lower():match("^teleport a%s+") then
-local canUse, remaining = CanUseCommand(userId, "tpplayer")
-if not canUse then
-SendChatMessage("Espera " .. remaining .. "s ⏳")
-return
-end
-local searchName = userMessage:lower():match("^tp a%s+(.+)") or
-userMessage:lower():match("^teleport a%s+(.+)")
-if searchName and #searchName >= 3 then
--- Buscar jugador con coincidencia mínima de 4 letras
-local bestMatch = nil
-local bestMatchLength = 0
-for _, player in ipairs(Players:GetPlayers()) do
-local displayName = (player.DisplayName or ""):lower()
-local username = player.Name:lower()
--- Buscar coincidencia
-if displayName:find(searchName, 1, true) or username:find(searchName, 1, true) then
-local matchLength = math.min(#searchName, #username)
-if matchLength > bestMatchLength then
-bestMatch = player
-bestMatchLength = matchLength
-end
-end
-end
-if bestMatch and bestMatch.Character then
-local targetRoot = bestMatch.Character:FindFirstChild("HumanoidRootPart")
-if targetRoot then
--- Teleportar al jugador
-local character = LP.Character
-local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-if rootPart then
--- Teleport con offset para no quedar encima
-local targetPos = targetRoot.Position + Vector3.new(3, 0, 3)
-rootPart.CFrame = CFrame.new(targetPos)
-SendChatMessage("TP a " .. (bestMatch.DisplayName or bestMatch.Name) .. " ✅")
-else
-SendChatMessage("error no encontre tu personaje")
-end
-else
-SendChatMessage("jugador sin personaje")
-end
-else
-SendChatMessage("no encontre a '" .. searchName .. "'")
-end
-else
-SendChatMessage("nombre muy corto min 3 letras")
-end
-return
+    local canUse, remaining = CanUseCommand(userId, "tpplayer")
+    if not canUse then
+        SendChatMessage("Espera " .. remaining .. "s ⏳")
+        return
+    end
+    
+    local searchName = userMessage:lower():match("^tp a%s+(.+)") or
+                      userMessage:lower():match("^teleport a%s+(.+)")
+    
+    if searchName and #searchName >= 3 then
+        -- Buscar jugador con coincidencia mínima de 3 letras
+        local bestMatch = nil
+        local bestMatchLength = 0
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            local displayName = (player.DisplayName or ""):lower()
+            local username = player.Name:lower()
+            
+            -- Buscar coincidencia
+            if displayName:find(searchName, 1, true) or username:find(searchName, 1, true) then
+                local matchLength = math.min(#searchName, #username)
+                if matchLength > bestMatchLength then
+                    bestMatch = player
+                    bestMatchLength = matchLength
+                end
+            end
+        end
+        
+        if bestMatch and bestMatch.Character then
+            local targetRoot = bestMatch.Character:FindFirstChild("HumanoidRootPart")
+            if targetRoot then
+                -- Teleportar al jugador usando el método del script de ejemplo
+                local character = LP.Character
+                local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+                
+                if rootPart then
+                    -- Calcular posición con offset (3 studs adelante y 2.5 arriba)
+                    local targetPos = targetRoot.Position + Vector3.new(3, 2.5, 0)
+                    local newCFrame = CFrame.new(targetPos.X, targetPos.Y, targetPos.Z)
+                    
+                    -- TP instantáneo
+                    rootPart.CFrame = newCFrame
+                    
+                    SendChatMessage("TP a " .. (bestMatch.DisplayName or bestMatch.Name) .. " ✅")
+                else
+                    SendChatMessage("error no encontre tu personaje")
+                end
+            else
+                SendChatMessage("jugador sin personaje")
+            end
+        else
+            SendChatMessage("no encontre a '" .. searchName .. "'")
+        end
+    else
+        SendChatMessage("nombre muy corto min 3 letras")
+    end
+    return
 end
 -- Comando especial: ver estado de conversación
 if userMessage:lower() == "estado" or userMessage:lower() == "status" then
