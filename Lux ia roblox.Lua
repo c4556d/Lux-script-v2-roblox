@@ -14,7 +14,7 @@ local API_KEY = ""
 local API_TIMEOUT_SECONDS = 15
 local API_PROVIDER = "gemini" -- "gemini" o "groq"
 local GROQ_MODEL_URL = "https://api.groq.com/openai/v1/chat/completions"
-local GROQ_MODEL = "llama-3.3-70b-versatile" -- Modelo por defecto de Groq
+local GROQ_MODEL = "openai/gpt-oss-120b" -- Modelo por defecto de Groq
 local GEMINI_MODEL_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 -- ============================================
 -- SISTEMA DE EJECUCIÓN DE SCRIPTS
@@ -2136,6 +2136,32 @@ local info = FormatObjectInfo(best.name, best.data)
 SendChatMessage(info .. " | di tp para ir")
 -- Guardar último objeto encontrado para teleport
 _G.LuxLastFoundObject = best.data
+
+-- ✅ NUEVO: Iluminar objeto encontrado en verde por 6 segundos
+task.spawn(function()
+    local objName = best.name
+    local obj = workspace:FindFirstChild(objName, true)
+    
+    if obj then
+        -- Crear highlight verde
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "LuxObjectHighlight"
+        highlight.FillColor = Color3.fromRGB(50, 255, 50) -- Verde brillante
+        highlight.OutlineColor = Color3.fromRGB(200, 255, 200) -- Borde claro
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Parent = obj
+        
+        print("[Lux] Highlighted object:", objName)
+        
+        -- Remover después de 6 segundos
+        task.wait(6)
+        if highlight and highlight.Parent then
+            highlight:Destroy()
+            print("[Lux] Object highlight removed")
+        end
+    end
+end)
 else
 SendChatMessage("no encontrado intenta en ingles")
 end
